@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "2-Step Zoom Recording Downloader",
+  "description": "Capture Zoom recording URLs and download with local cURL progress.",
+  "version": "1.0.1",
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "storage",
+    "downloads",
+    "webRequest",
+    "scripting",
+    "cookies",
+    "nativeMessaging",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "service_worker.js"
+  },
+  "side_panel": {
+    "default_path": "popup.html"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "2-Step Zoom Recording Downloader",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  }
+}
