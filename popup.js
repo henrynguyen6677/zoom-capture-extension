@@ -7,8 +7,8 @@ const downloadStateEl = document.getElementById("downloadState");
 const toastEl = document.getElementById("toast");
 const toastMsgEl = document.getElementById("toastMsg");
 const btnCloseToast = document.getElementById("btnCloseToast");
-const setupCommandEl = document.getElementById("setupCommand");
-const setupUrlEl = document.getElementById("setupUrl");
+const setupDownloadBtnEl = document.getElementById("setupDownloadBtn");
+const setupInstructionsEl = document.getElementById("setupInstructions");
 const setupCardEl = document.getElementById("setupCard");
 const setupDetailsEl = document.getElementById("setupDetails");
 const setupStatusPillEl = document.getElementById("setupStatusPill");
@@ -17,15 +17,13 @@ const historyListEl = document.getElementById("historyList");
 const btnCapture = document.getElementById("btnCapture");
 const btnDownload = document.getElementById("btnDownload");
 const btnReset = document.getElementById("btnReset");
-const btnCopySetup = document.getElementById("btnCopySetup");
 const btnCopyLink = document.getElementById("btnCopyLink");
 const btnOpenInline = document.getElementById("btnOpenInline");
 const btnRefreshNative = document.getElementById("btnRefreshNative");
 
 let latestState = null;
 let latestNativeInstalled = null;
-const INSTALL_URL_MAC = "https://raw.githubusercontent.com/henrynguyen6677/zoom-capture-extension/master/install.sh";
-const INSTALL_URL_BAT = "https://github.com/henrynguyen6677/zoom-capture-extension/releases/download/v2.0.0/install.bat";
+const RELEASE_BASE = "https://github.com/henrynguyen6677/zoom-capture-extension/releases/download/v2.0.0";
 let historyCheckToken = 0;
 let historyRenderKey = "";
 
@@ -183,6 +181,7 @@ function applyNativeStatus(nativeStatus) {
   latestNativeInstalled = installed;
   setupCardEl.classList.toggle("ready", installed);
   setupDetailsEl.classList.toggle("hidden", installed);
+  document.getElementById("btnUninstallNative").classList.toggle("hidden", !installed);
 
   if (installed) {
     setupStatusPillEl.textContent = "Installed ✓";
@@ -318,22 +317,23 @@ function getOS() {
   return "other";
 }
 
+const INSTALL_SH_URL = "https://raw.githubusercontent.com/henrynguyen6677/zoom-capture-extension/master/install.sh";
+
 function getSetupInfo() {
-  const id = chrome.runtime.id;
   const os = getOS();
+  const id = chrome.runtime.id;
   if (os === "windows") {
     return {
-      command: `Download and double-click install.bat`,
-      label: "Windows Setup:",
-      url: INSTALL_URL_BAT,
-      urlText: "Download install.bat"
+      mode: "download",
+      downloadUrl: `${RELEASE_BASE}/install.bat`,
+      buttonText: "⬇ Download Installer (.bat)",
+      instructions: "After download, double-click install.bat. Done!"
     };
   }
   return {
-    command: `curl -fsSL ${INSTALL_URL_MAC} | bash -s -- ${id}`,
-    label: "Run in Terminal:",
-    url: INSTALL_URL_MAC,
-    urlText: "View installer script"
+    mode: "command",
+    command: `curl -fsSL ${INSTALL_SH_URL} | bash -s -- ${id}`,
+    instructions: "Open Terminal, paste this command, press Enter:"
   };
 }
 
@@ -392,7 +392,7 @@ async function doDownload() {
     }
   } else {
     if (res.needsSetup) {
-      showToast("Native Host required. See setup below ↓", true);
+      showToast("Install Native Host below ↓ then click ↻ to verify", true);
       blinkSetupCard();
     } else {
       showToast(toFriendlyDownloadError(res.error), true);
@@ -451,16 +451,14 @@ btnReset.addEventListener("click", async () => {
   await refreshState();
 });
 
-btnCopySetup.addEventListener("click", async () => {
-  const info = getSetupInfo();
-  const copied = await copyText(info.command);
-  if (copied) {
-    showToast("Setup command copied.");
-    flashIcon(btnCopySetup, true);
+document.getElementById("btnUninstallNative").addEventListener("click", async () => {
+  const res = await send("UNINSTALL_NATIVE");
+  if (res.ok) {
+    showToast("Native Host uninstalled ✓");
   } else {
-    showToast("Failed to copy setup command.", true);
-    flashIcon(btnCopySetup, false);
+    showToast(res.error || "Uninstall failed", true);
   }
+  await refreshState();
 });
 
 btnRefreshNative.addEventListener("click", async () => {
@@ -524,9 +522,33 @@ chrome.runtime.onMessage.addListener((msg) => {
 });
 
 const setupInfo = getSetupInfo();
-setupCommandEl.textContent = setupInfo.command;
-setupUrlEl.textContent = setupInfo.urlText;
-setupUrlEl.href = setupInfo.url;
+const setupModeDownload = document.getElementById("setupModeDownload");
+const setupModeCommand = document.getElementById("setupModeCommand");
+const setupCommandEl = document.getElementById("setupCommand");
+const btnCopySetup = document.getElementById("btnCopySetup");
+
+if (setupInfo.mode === "download") {
+  setupModeDownload.classList.remove("hidden");
+  setupDownloadBtnEl.href = setupInfo.downloadUrl;
+  setupDownloadBtnEl.textContent = setupInfo.buttonText;
+} else {
+  setupModeCommand.classList.remove("hidden");
+  setupCommandEl.textContent = setupInfo.command;
+}
+setupInstructionsEl.textContent = setupInfo.instructions;
+
+if (btnCopySetup) {
+  btnCopySetup.addEventListener("click", async () => {
+    const copied = await copyText(setupInfo.command || "");
+    if (copied) {
+      showToast("Command copied ✓");
+      flashIcon(btnCopySetup, true);
+    } else {
+      showToast("Failed to copy", true);
+      flashIcon(btnCopySetup, false);
+    }
+  });
+}
 setupStatusPillEl.textContent = "Checking...";
 setupStatusPillEl.className = "setup-pill checking";
 refreshState();

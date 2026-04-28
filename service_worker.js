@@ -1065,6 +1065,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       return;
     }
 
+    if (msg.type === "UNINSTALL_NATIVE") {
+      try {
+        const nativeRes = await chrome.runtime.sendNativeMessage(NATIVE_HOST_NAME, {
+          action: "uninstall"
+        });
+        sendResponse({ ok: true, result: nativeRes });
+      } catch (err) {
+        sendResponse({ ok: false, error: String(err?.message || err) });
+      }
+      return;
+    }
+
     if (msg.type === "RESET_STATE") {
       state.linksByTab = {};
       state.selectedUrl = "";

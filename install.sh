@@ -59,15 +59,10 @@ mkdir -p "$HOST_DIR" "$MANIFEST_DIR"
 echo "Downloading native host binary..."
 curl -fsSL "$DOWNLOAD_URL" -o "$BINARY_PATH"
 chmod +x "$BINARY_PATH"
-echo "✓ Downloaded: $BINARY_PATH"
-
-# Verify binary works
-if "$BINARY_PATH" --help 2>/dev/null || true; then
-  echo "✓ Binary OK"
-fi
+echo "✓ Downloaded: $BINARY_PATH ($(du -h "$BINARY_PATH" | cut -f1))"
 
 # Write manifest
-cat > "$MANIFEST_PATH" <<JSON
+cat > "$MANIFEST_PATH" <<MANIFEST
 {
   "name": "${HOST_NAME}",
   "description": "Zoom recording downloader native host",
@@ -77,11 +72,11 @@ cat > "$MANIFEST_PATH" <<JSON
     "chrome-extension://${EXT_ID}/"
   ]
 }
-JSON
+MANIFEST
 echo "✓ Manifest: $MANIFEST_PATH"
 
 echo ""
 echo "========================================"
 echo " ✓ Installation complete!"
-echo " Restart Chrome if it is running."
+echo " Click ↻ in the extension to verify."
 echo "========================================"

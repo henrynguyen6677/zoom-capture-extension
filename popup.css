@@ -336,10 +336,88 @@ h1 {
 }
 
 .setup-hint {
-  margin: 4px 0 6px;
+  margin: 4px 0 8px;
   font-size: 11px;
   color: #6a788a;
   line-height: 1.3;
+}
+
+.setup-download-btn {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  padding: 10px 12px;
+  font-size: 13px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+}
+
+.setup-instructions {
+  margin: 0;
+  font-size: 11px;
+  color: #6a788a;
+  line-height: 1.4;
+}
+
+.setup-transparency {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #55606f;
+}
+
+.setup-transparency summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #3a5a8a;
+  font-size: 11px;
+}
+
+.setup-transparency summary:hover {
+  text-decoration: underline;
+}
+
+.transparency-list {
+  margin: 6px 0 4px;
+  padding-left: 18px;
+  line-height: 1.5;
+}
+
+.transparency-list li {
+  margin-bottom: 2px;
+}
+
+.transparency-list a,
+.transparency-source a {
+  color: #2b5f9b;
+  text-decoration: none;
+}
+
+.transparency-list a:hover,
+.transparency-source a:hover {
+  text-decoration: underline;
+}
+
+.transparency-source {
+  margin: 4px 0 0;
+  font-size: 10px;
+  color: #7a8a9e;
+}
+
+.setup-after-hint {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: #2a7a5c;
+  font-weight: 600;
+}
+
+.uninstall-btn {
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+  margin-left: auto;
+  margin-right: 2px;
+  background: linear-gradient(180deg, #e05555, #b83030);
+  border-radius: 50%;
 }
 
 .setup-pill {

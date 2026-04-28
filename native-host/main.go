@@ -299,6 +299,63 @@ func fileExists(filePath string) {
 	})
 }
 
+func uninstallSelf() {
+	home := homeDir()
+	hostName := "com.henry.zoomcurl"
+	removed := []string{}
+	errors := []string{}
+
+	// Determine paths based on OS
+	var manifestPath string
+	var binaryDir string
+
+	switch runtime.GOOS {
+	case "darwin":
+		manifestPath = filepath.Join(home, "Library", "Application Support", "Google", "Chrome", "NativeMessagingHosts", hostName+".json")
+		binaryDir = filepath.Join(home, ".config", "zoom-native-host")
+	case "linux":
+		manifestPath = filepath.Join(home, ".config", "google-chrome", "NativeMessagingHosts", hostName+".json")
+		binaryDir = filepath.Join(home, ".config", "zoom-native-host")
+	case "windows":
+		binaryDir = filepath.Join(os.Getenv("LOCALAPPDATA"), "zoom-native-host")
+		manifestPath = filepath.Join(binaryDir, hostName+".json")
+		// Remove registry key
+		cmd := exec.Command("reg", "delete", `HKCU\Software\Google\Chrome\NativeMessagingHosts\`+hostName, "/f")
+		if err := cmd.Run(); err == nil {
+			removed = append(removed, "registry key")
+		}
+	}
+
+	// Remove manifest
+	if manifestPath != "" {
+		if err := os.Remove(manifestPath); err == nil {
+			removed = append(removed, "manifest")
+		} else if !os.IsNotExist(err) {
+			errors = append(errors, "manifest: "+err.Error())
+		}
+	}
+
+	// Remove binary directory (but we're running from it, so remove files inside)
+	if binaryDir != "" {
+		entries, _ := os.ReadDir(binaryDir)
+		for _, e := range entries {
+			p := filepath.Join(binaryDir, e.Name())
+			// Skip self (can't delete running binary on some OS)
+			if err := os.Remove(p); err == nil {
+				removed = append(removed, e.Name())
+			}
+		}
+		// Try removing dir (will fail if we're running from it — that's OK)
+		os.Remove(binaryDir)
+	}
+
+	writeMessage(map[string]interface{}{
+		"ok":      true,
+		"removed": removed,
+		"errors":  errors,
+	})
+}
+
 func main() {
 	msg, err := readMessage()
 	if err != nil {
@@ -323,6 +380,9 @@ func main() {
 
 	case "file_exists":
 		fileExists(getString(msg, "path"))
+
+	case "uninstall":
+		uninstallSelf()
 
 	default:
 		writeMessage(map[string]interface{}{"ok": false, "error": "Unsupported action: " + action})
