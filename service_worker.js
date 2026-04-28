@@ -698,13 +698,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         if (missingNative) {
           // Native host not installed → show setup instructions and fallback
           state.download.status = "error";
-          state.download.error = "Native Host not installed. One-time setup required.";
+          state.download.error = "Helper not installed. One-time setup required.";
           state.download.endedAt = now();
           await persistState();
           await broadcastState();
           sendResponse({
             ok: false,
-            error: "Native Host not installed. One-time setup required (30 seconds).",
+            error: "Helper not installed. One-time setup required (30 seconds).",
             needsSetup: true
           });
           return;
@@ -731,7 +731,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
 
       state.download.status = "error";
-      state.download.error = "Download failed. Please install Native Host for reliable downloads.";
+      state.download.error = "Download failed. Install Helper for reliable downloads.";
       state.download.endedAt = now();
       await persistState();
       await broadcastState();
@@ -1062,18 +1062,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
 
       sendResponse({ ok: true, existsById: out });
-      return;
-    }
-
-    if (msg.type === "UNINSTALL_NATIVE") {
-      try {
-        const nativeRes = await chrome.runtime.sendNativeMessage(NATIVE_HOST_NAME, {
-          action: "uninstall"
-        });
-        sendResponse({ ok: true, result: nativeRes });
-      } catch (err) {
-        sendResponse({ ok: false, error: String(err?.message || err) });
-      }
       return;
     }
 

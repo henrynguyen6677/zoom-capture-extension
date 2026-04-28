@@ -37,18 +37,6 @@ body {
   overflow: hidden;
 }
 
-h1 {
-  margin: 0;
-  font-size: 22px;
-  letter-spacing: 0.3px;
-}
-
-.subtitle {
-  margin: 6px 0 6px;
-  color: #b3c2d9;
-  font-size: 13px;
-}
-
 .status-card {
   background: var(--panel);
   color: var(--text);
@@ -315,6 +303,37 @@ h1 {
   word-break: break-word;
 }
 
+.cmd-shell {
+  position: relative;
+  padding: 10px 12px;
+  white-space: pre-wrap;
+  color: #a8d8a8;
+}
+
+.cmd-shell::before {
+  content: "$ ";
+  color: #6a9f6a;
+  font-weight: 700;
+}
+
+.uninstall-details {
+  margin-top: 6px;
+}
+
+.uninstall-details summary {
+  cursor: pointer;
+  font-size: 11px;
+  color: #8494a7;
+}
+
+.uninstall-details summary:hover {
+  color: #a04040;
+}
+
+.setup-installed {
+  margin-top: 6px;
+}
+
 .setup-details {
   margin-top: 6px;
 }
@@ -359,65 +378,25 @@ h1 {
   line-height: 1.4;
 }
 
-.setup-transparency {
-  margin-top: 8px;
-  font-size: 11px;
-  color: #55606f;
-}
-
-.setup-transparency summary {
-  cursor: pointer;
-  font-weight: 600;
-  color: #3a5a8a;
-  font-size: 11px;
-}
-
-.setup-transparency summary:hover {
-  text-decoration: underline;
-}
-
-.transparency-list {
-  margin: 6px 0 4px;
-  padding-left: 18px;
-  line-height: 1.5;
-}
-
-.transparency-list li {
-  margin-bottom: 2px;
-}
-
-.transparency-list a,
-.transparency-source a {
-  color: #2b5f9b;
-  text-decoration: none;
-}
-
-.transparency-list a:hover,
-.transparency-source a:hover {
-  text-decoration: underline;
-}
-
-.transparency-source {
-  margin: 4px 0 0;
+.setup-source {
+  margin: 6px 0 0;
   font-size: 10px;
   color: #7a8a9e;
 }
 
-.setup-after-hint {
-  margin: 8px 0 0;
-  font-size: 11px;
-  color: #2a7a5c;
-  font-weight: 600;
+.setup-source a {
+  color: #2b5f9b;
+  text-decoration: none;
 }
 
-.uninstall-btn {
-  width: 26px;
-  height: 26px;
-  font-size: 14px;
-  margin-left: auto;
-  margin-right: 2px;
-  background: linear-gradient(180deg, #e05555, #b83030);
-  border-radius: 50%;
+.setup-source a:hover {
+  text-decoration: underline;
+}
+
+.setup-after-hint {
+  margin: 4px 0 0;
+  font-size: 10px;
+  color: #6a788a;
 }
 
 .setup-pill {

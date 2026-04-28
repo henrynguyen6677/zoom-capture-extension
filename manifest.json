@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "2-Step Zoom Recording Downloader",
   "description": "Capture Zoom recording URLs and download reliably via native helper.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyE8HHEaggZg8IssIgSjlaGRzr3O6xCOD3D4cd4Rdb+xQVPL+wczanSnfAzyape83Nyjfl0tDcC4bcXGqRTWotLU26UQOouLQncIwFLkQTypAp36ln+TOxWCkYFTd2QaPvTV1VSKgTLnLmID2ehwBc1VmSQj6dvcW56wFqRpCxOSZ2cPRHUV5m6KZT2FBtCbCV9FqVzotP3w7c511J/E7pVnQPoBJDu/SFbH9LrDxPbmNRhFvzX06Ym8qRDSn3HtAqfQ84j2U8TedRG1gJdNwco1mGVlpoDpElrZpmxwnUtEgmQnkhXRCTRFDGJ/AaWMXkyMptWzu8A7PasAgY2dM7wIDAQAB",
   "permissions": [
     "tabs",

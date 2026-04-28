@@ -8,7 +8,6 @@ const toastEl = document.getElementById("toast");
 const toastMsgEl = document.getElementById("toastMsg");
 const btnCloseToast = document.getElementById("btnCloseToast");
 const setupDownloadBtnEl = document.getElementById("setupDownloadBtn");
-const setupInstructionsEl = document.getElementById("setupInstructions");
 const setupCardEl = document.getElementById("setupCard");
 const setupDetailsEl = document.getElementById("setupDetails");
 const setupStatusPillEl = document.getElementById("setupStatusPill");
@@ -176,12 +175,28 @@ function blinkSetupCard() {
   setTimeout(() => setupCardEl.classList.remove("blink-alert"), 1600);
 }
 
+function getUninstallCmd() {
+  const os = getOS();
+  if (os === "windows") {
+    return 'Remove-Item -Recurse -Force "$env:LOCALAPPDATA\\zoom-native-host"\nreg delete "HKCU\\Software\\Google\\Chrome\\NativeMessagingHosts\\com.henry.zoomcurl" /f';
+  }
+  return 'rm -rf ~/.config/zoom-native-host\nrm -f ~/Library/Application\\ Support/Google/Chrome/NativeMessagingHosts/com.henry.zoomcurl.json';
+}
+
 function applyNativeStatus(nativeStatus) {
   const installed = !!nativeStatus?.installed;
   latestNativeInstalled = installed;
   setupCardEl.classList.toggle("ready", installed);
   setupDetailsEl.classList.toggle("hidden", installed);
-  document.getElementById("btnUninstallNative").classList.toggle("hidden", !installed);
+
+  const installedEl = document.getElementById("setupInstalled");
+  if (installedEl) {
+    installedEl.classList.toggle("hidden", !installed);
+    if (installed) {
+      const cmdEl = document.getElementById("uninstallCmd");
+      if (cmdEl) cmdEl.textContent = getUninstallCmd();
+    }
+  }
 
   if (installed) {
     setupStatusPillEl.textContent = "Installed ✓";
@@ -381,18 +396,18 @@ async function doDownload() {
   if (res.ok) {
     const method = res.method || "unknown";
     const methodLabel = {
-      native_host: "Native Host",
+      native_host: "Helper",
       open_tab: "Opened in browser"
     }[method] || method;
 
     if (method === "open_tab") {
-      showToast(`${methodLabel} — file may be incomplete. Install Native Host for reliable downloads.`, true);
+      showToast(`${methodLabel} — file may be incomplete. Install Helper for reliable downloads.`, true);
     } else {
       showToast(`Download started (${methodLabel})`);
     }
   } else {
     if (res.needsSetup) {
-      showToast("Install Native Host below ↓ then click ↻ to verify", true);
+      showToast("Install Helper below ↓ then click ↻ to verify", true);
       blinkSetupCard();
     } else {
       showToast(toFriendlyDownloadError(res.error), true);
@@ -451,16 +466,6 @@ btnReset.addEventListener("click", async () => {
   await refreshState();
 });
 
-document.getElementById("btnUninstallNative").addEventListener("click", async () => {
-  const res = await send("UNINSTALL_NATIVE");
-  if (res.ok) {
-    showToast("Native Host uninstalled ✓");
-  } else {
-    showToast(res.error || "Uninstall failed", true);
-  }
-  await refreshState();
-});
-
 btnRefreshNative.addEventListener("click", async () => {
   setupStatusPillEl.textContent = "Checking...";
   setupStatusPillEl.className = "setup-pill checking";
@@ -471,12 +476,12 @@ btnRefreshNative.addEventListener("click", async () => {
     if (resNative.ok) {
       applyNativeStatus(resNative);
       if (resNative.installed) {
-        showToast("Native Host detected ✓");
+        showToast("Helper detected ✓");
       } else {
-        showToast("Native Host not found. Please install first.", true);
+        showToast("Helper not found. Install below.", true);
       }
     } else {
-      showToast(resNative.error || "Failed to check native host", true);
+      showToast(resNative.error || "Failed to check helper", true);
     }
   } finally {
     btnRefreshNative.disabled = false;
@@ -531,11 +536,14 @@ if (setupInfo.mode === "download") {
   setupModeDownload.classList.remove("hidden");
   setupDownloadBtnEl.href = setupInfo.downloadUrl;
   setupDownloadBtnEl.textContent = setupInfo.buttonText;
+  const instrEl = document.getElementById("setupInstructions");
+  if (instrEl) instrEl.textContent = setupInfo.instructions;
 } else {
   setupModeCommand.classList.remove("hidden");
   setupCommandEl.textContent = setupInfo.command;
+  const instrEl = document.getElementById("setupInstructions2");
+  if (instrEl) instrEl.textContent = setupInfo.instructions;
 }
-setupInstructionsEl.textContent = setupInfo.instructions;
 
 if (btnCopySetup) {
   btnCopySetup.addEventListener("click", async () => {
@@ -552,3 +560,9 @@ if (btnCopySetup) {
 setupStatusPillEl.textContent = "Checking...";
 setupStatusPillEl.className = "setup-pill checking";
 refreshState();
+
+// Auto re-check when panel gets focus (e.g. user switches back after installing)
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) refreshState();
+});
+window.addEventListener("focus", () => refreshState());

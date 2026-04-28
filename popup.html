@@ -8,8 +8,6 @@
   </head>
   <body>
     <main class="app">
-      <h1>2-Step Zoom Recording Downloader</h1>
-      <p class="subtitle">Capture the playback URL and download Zoom recordings.</p>
 
       <section id="captureCard" class="status-card capture-card">
         <div class="capture-head">
@@ -38,34 +36,30 @@
 
       <section id="setupCard" class="status-card setup-optional">
         <div class="row">
-          <div class="label">Native Host <span class="optional-badge">required</span></div>
-          <button id="btnUninstallNative" class="icon-btn uninstall-btn hidden" title="Uninstall Native Host">🗑</button>
-          <button id="btnRefreshNative" class="icon-btn refresh-btn" title="Re-check native host status">↻</button>
+          <div class="label">Helper <span class="optional-badge">required</span></div>
+          <button id="btnRefreshNative" class="icon-btn refresh-btn" title="Re-check helper status">↻</button>
           <div id="setupStatusPill" class="setup-pill checking">Checking...</div>
         </div>
         <div id="setupDetails" class="setup-details hidden">
-          <p class="setup-hint">One-time setup (30 seconds). Downloads Zoom recordings reliably.</p>
           <div id="setupModeDownload" class="hidden">
             <a id="setupDownloadBtn" class="btn info setup-download-btn" href="#" target="_blank" rel="noopener noreferrer">⬇ Download Installer</a>
+            <p id="setupInstructions" class="setup-instructions"></p>
           </div>
           <div id="setupModeCommand" class="hidden">
+            <p id="setupInstructions2" class="setup-instructions"></p>
             <div class="row">
               <div id="setupCommand" class="cmd"></div>
               <button id="btnCopySetup" class="icon-btn" title="Copy command">⧉</button>
             </div>
           </div>
-          <p id="setupInstructions" class="setup-instructions"></p>
-          <details class="setup-transparency">
-            <summary>What does the installer do?</summary>
-            <ul class="transparency-list">
-              <li>Downloads a small helper binary (~5MB) from <a href="https://github.com/henrynguyen6677/zoom-capture-extension" target="_blank" rel="noopener noreferrer">GitHub</a></li>
-              <li>Saves it to your user folder (no admin required)</li>
-              <li>Creates a config file so Chrome can find it</li>
-              <li>No background processes, no startup items, no tracking</li>
-            </ul>
-            <p class="transparency-source">100% open source — <a href="https://github.com/henrynguyen6677/zoom-capture-extension/tree/master/native-host" target="_blank" rel="noopener noreferrer">view source code</a></p>
+          <p class="setup-source">Open source · <a href="https://github.com/henrynguyen6677/zoom-capture-extension" target="_blank" rel="noopener noreferrer">view code</a> · 5MB · no admin needed</p>
+          <p class="setup-after-hint">After installing, click ↻ to verify.</p>
+        </div>
+        <div id="setupInstalled" class="setup-installed hidden">
+          <details class="uninstall-details">
+            <summary>Uninstall</summary>
+            <div id="uninstallCmd" class="cmd cmd-shell"></div>
           </details>
-          <p class="setup-after-hint">After installing, click ↻ above to verify — no Chrome restart needed.</p>
         </div>
       </section>
 
