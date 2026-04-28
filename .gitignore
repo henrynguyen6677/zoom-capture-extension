@@ -1,0 +1,6 @@
+.DS_Store
+dist/
+native-host/build/
+native-host/zoom-native-host
+*.zip
+mise.toml

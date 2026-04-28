@@ -9,14 +9,14 @@
   <body>
     <main class="app">
       <h1>2-Step Zoom Recording Downloader</h1>
-      <p class="subtitle">Capture the playback URL and download with local cURL.</p>
+      <p class="subtitle">Capture the playback URL and download Zoom recordings.</p>
 
       <section id="captureCard" class="status-card capture-card">
         <div class="capture-head">
           <div class="label">Captured Link</div>
         </div>
         <div class="row capture-row">
-          <div id="capturedLink" class="value capture-value">(none)</div>
+          <div id="capturedLink" class="value capture-value empty-state">No link captured</div>
           <button id="btnCopyLink" class="icon-btn" title="Copy link">⧉</button>
         </div>
         <div id="captureMeta" class="hint capture-meta hidden"></div>
@@ -36,18 +36,19 @@
         </div>
       </section>
 
-      <section id="setupCard" class="status-card">
+      <section id="setupCard" class="status-card setup-optional">
         <div class="row">
-          <div class="label">Native Host</div>
+          <div class="label">Native Host <span class="optional-badge">optional</span></div>
           <button id="btnRefreshNative" class="icon-btn refresh-btn" title="Re-check native host status">↻</button>
           <div id="setupStatusPill" class="setup-pill checking">Checking...</div>
         </div>
         <div id="setupDetails" class="setup-details hidden">
+          <p class="setup-hint">For large files or when browser download fails. Not required for basic use.</p>
           <div class="row">
             <div id="setupCommand" class="cmd">(building command...)</div>
             <button id="btnCopySetup" class="icon-btn" title="Copy setup command">⧉</button>
           </div>
-          <a id="setupUrl" class="hint-link" href="#" target="_blank" rel="noopener noreferrer">Open cloud installer script</a>
+          <a id="setupUrl" class="hint-link" href="#" target="_blank" rel="noopener noreferrer">Open installer script</a>
         </div>
       </section>
 
@@ -64,7 +65,7 @@
       <section class="status-card history-card">
         <div class="label">History</div>
         <div id="historyBody" class="history-body">
-          <div id="historyList" class="history-list">(empty)</div>
+          <div id="historyList" class="history-list"><div class="history-empty">No downloads yet</div></div>
         </div>
       </section>
       <div class="footer-bar">

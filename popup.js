@@ -24,7 +24,8 @@ const btnRefreshNative = document.getElementById("btnRefreshNative");
 
 let latestState = null;
 let latestNativeInstalled = null;
-const CLOUD_INSTALL_URL = "https://gist.githubusercontent.com/henrynguyen6677/db090d37a36b54949686ab38e09babe1/raw/bc6575b867d26fdecd3b08e57ff030d3afcba17b/install_native_host.sh";
+const INSTALL_URL_MAC = "https://raw.githubusercontent.com/henrynguyen6677/zoom-capture-extension/master/install.sh";
+const INSTALL_URL_BAT = "https://github.com/henrynguyen6677/zoom-capture-extension/releases/download/v2.0.0/install.bat";
 let historyCheckToken = 0;
 let historyRenderKey = "";
 
@@ -133,7 +134,7 @@ function fileBaseName(value) {
 function renderHistory(list) {
   const items = (Array.isArray(list) ? list : []).filter((it) => it?.kind === "download");
   if (!items.length) {
-    historyListEl.textContent = "(empty)";
+    historyListEl.innerHTML = '<div class="history-empty">No downloads yet</div>';
     return;
   }
 
@@ -230,7 +231,8 @@ async function applyState(state) {
   latestState = state || null;
   const selected = state?.selectedUrl || "";
   const hasValidSelected = !!selected && /^https?:\/\//i.test(selected);
-  capturedLinkEl.textContent = selected ? shortenUrl(selected) : "(none)";
+  capturedLinkEl.textContent = selected ? shortenUrl(selected) : "No link captured";
+  capturedLinkEl.classList.toggle("empty-state", !selected);
   capturedLinkEl.title = selected || "";
   if (selected) {
     const source = state?.selectedMeta?.source || "n/a";
@@ -309,9 +311,30 @@ async function refreshState() {
   if (resNative.ok) applyNativeStatus(resNative);
 }
 
-function getSetupCommand() {
+function getOS() {
+  const ua = navigator.userAgent;
+  if (ua.includes("Windows")) return "windows";
+  if (ua.includes("Mac")) return "mac";
+  return "other";
+}
+
+function getSetupInfo() {
   const id = chrome.runtime.id;
-  return `curl -fsSL ${CLOUD_INSTALL_URL} | bash -s -- ${id}`;
+  const os = getOS();
+  if (os === "windows") {
+    return {
+      command: `Download and double-click install.bat`,
+      label: "Windows Setup:",
+      url: INSTALL_URL_BAT,
+      urlText: "Download install.bat"
+    };
+  }
+  return {
+    command: `curl -fsSL ${INSTALL_URL_MAC} | bash -s -- ${id}`,
+    label: "Run in Terminal:",
+    url: INSTALL_URL_MAC,
+    urlText: "View installer script"
+  };
 }
 
 function toFriendlyDownloadError(raw) {
@@ -354,21 +377,25 @@ function clearOverwriteState() {
 }
 
 async function doDownload() {
-  const res = await send("DOWNLOAD_WITH_NATIVE_CURL");
+  const res = await send("SMART_DOWNLOAD");
   if (res.ok) {
-    showToast(`Downloaded via local cURL: ${res.output || "(unknown file name)"}`);
+    const method = res.method || "unknown";
+    const methodLabel = {
+      native_host: "Native Host",
+      open_tab: "Opened in browser"
+    }[method] || method;
+
+    if (method === "open_tab") {
+      showToast(`${methodLabel} — file may be incomplete. Install Native Host for reliable downloads.`, true);
+    } else {
+      showToast(`Download started (${methodLabel})`);
+    }
   } else {
-    const raw = String(res.error || "Download failed");
-    const missingNative =
-      raw.includes("Specified native messaging host not found") ||
-      raw.includes("Native host has exited") ||
-      raw.includes("Native host disconnected") ||
-      raw.includes("Could not establish connection");
-    if (missingNative) {
-      showToast("Native Host is not installed. Run install_native_host.sh first.", true);
+    if (res.needsSetup) {
+      showToast("Native Host required. See setup below ↓", true);
       blinkSetupCard();
     } else {
-      showToast(toFriendlyDownloadError(raw), true);
+      showToast(toFriendlyDownloadError(res.error), true);
     }
   }
   await refreshState();
@@ -382,19 +409,22 @@ btnDownload.addEventListener("click", async () => {
     return;
   }
 
-  // First click = check if file exists
-  const checkRes = await send("CHECK_FILE_EXISTS");
-  if (checkRes.ok && checkRes.exists) {
-    pendingOverwrite = true;
-    btnDownload.textContent = "File exists — tap to overwrite";
-    btnDownload.classList.add("danger-state");
-    showToast(`⚠ ${checkRes.filename} already exists. Tap again to overwrite.`, true);
-    // Auto-reset after 5s
-    overwriteTimer = setTimeout(() => {
-      clearOverwriteState();
-      showToast("");
-    }, 5000);
-    return;
+  // Try file check (works only with native host — gracefully skip if unavailable)
+  try {
+    const checkRes = await send("CHECK_FILE_EXISTS");
+    if (checkRes.ok && checkRes.exists) {
+      pendingOverwrite = true;
+      btnDownload.textContent = "File exists — tap to overwrite";
+      btnDownload.classList.add("danger-state");
+      showToast(`⚠ ${checkRes.filename} already exists. Tap again to overwrite.`, true);
+      overwriteTimer = setTimeout(() => {
+        clearOverwriteState();
+        showToast("");
+      }, 5000);
+      return;
+    }
+  } catch {
+    // Native host not available — skip file check, proceed with download
   }
 
   await doDownload();
@@ -422,8 +452,8 @@ btnReset.addEventListener("click", async () => {
 });
 
 btnCopySetup.addEventListener("click", async () => {
-  const cmd = getSetupCommand();
-  const copied = await copyText(cmd);
+  const info = getSetupInfo();
+  const copied = await copyText(info.command);
   if (copied) {
     showToast("Setup command copied.");
     flashIcon(btnCopySetup, true);
@@ -493,9 +523,10 @@ chrome.runtime.onMessage.addListener((msg) => {
   }
 });
 
-setupCommandEl.textContent = getSetupCommand();
-setupUrlEl.textContent = "Open cloud installer script";
-setupUrlEl.href = CLOUD_INSTALL_URL;
+const setupInfo = getSetupInfo();
+setupCommandEl.textContent = setupInfo.command;
+setupUrlEl.textContent = setupInfo.urlText;
+setupUrlEl.href = setupInfo.url;
 setupStatusPillEl.textContent = "Checking...";
 setupStatusPillEl.className = "setup-pill checking";
 refreshState();

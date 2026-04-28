@@ -98,6 +98,7 @@ function makeCaptureItem(input) {
     documentUrl: input.documentUrl || "",
     type: input.type || "",
     source: input.source || "network",
+    requestHeaders: input.requestHeaders || [],
     seenAt: now()
   };
 }
@@ -181,7 +182,12 @@ async function addCapturedLink(tabId, input) {
   const bucket = ensureTabBucket(tabId);
   const idx = bucket.findIndex((x) => x.url === item.url);
   if (idx >= 0) {
+    // Preserve existing requestHeaders if new item has none
+    const existingHeaders = bucket[idx].requestHeaders;
     bucket[idx] = { ...bucket[idx], ...item, seenAt: now() };
+    if (existingHeaders && existingHeaders.length > 0 && (!bucket[idx].requestHeaders || bucket[idx].requestHeaders.length === 0)) {
+      bucket[idx].requestHeaders = existingHeaders;
+    }
   } else {
     bucket.unshift(item);
   }
@@ -437,6 +443,25 @@ chrome.webRequest.onBeforeRequest.addListener(
   { urls: ["<all_urls>"] }
 );
 
+// Capture request headers from media requests for replay
+chrome.webRequest.onSendHeaders.addListener(
+  (details) => {
+    const tabId = details.tabId;
+    if (tabId < 0) return;
+    if (!isMediaUrl(details.url)) return;
+
+    // Store headers for this URL so we can replay exact request
+    const bucket = ensureTabBucket(tabId);
+    const idx = bucket.findIndex((x) => x.url === normalizeUrl(details.url));
+    if (idx >= 0) {
+      bucket[idx].requestHeaders = details.requestHeaders || [];
+      console.log("[HEADERS] Captured", details.requestHeaders?.length, "headers for:", details.url?.slice(0, 80));
+    }
+  },
+  { urls: ["<all_urls>"] },
+  ["requestHeaders"]
+);
+
 chrome.downloads.onCreated.addListener(async (item) => {
   if (state.download.id !== item.id) return;
   state.download.filename = item.filename || state.download.filename;
@@ -553,6 +578,164 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         pickedFrom: state.selectedMeta.source,
         score: state.selectedMeta.score
       });
+      return;
+    }
+
+    if (msg.type === "SMART_DOWNLOAD") {
+      if (!state.selectedUrl) {
+        sendResponse({ ok: false, error: "No link available to download." });
+        return;
+      }
+      if (!/^https?:\/\//i.test(state.selectedUrl)) {
+        sendResponse({ ok: false, error: "Invalid download URL." });
+        return;
+      }
+
+      const filename = sanitizeFilenameFromUrl(state.selectedUrl);
+
+      state.download = {
+        id: null,
+        status: "starting",
+        filename,
+        openPath: "",
+        progressPct: 0,
+        totalBytes: 0,
+        receivedBytes: 0,
+        error: "",
+        startedAt: now(),
+        endedAt: 0
+      };
+      await persistState();
+      await broadcastState();
+
+      // --- Strategy 1: Native host (Go binary — reliable, full download) ---
+      console.log("[SMART_DOWNLOAD] Strategy 1: native host");
+      try {
+        const payload = await buildCurlPayload();
+        state.download.filename = payload.output;
+        await persistState();
+        await broadcastState();
+
+        const nativeRes = await new Promise((resolve, reject) => {
+          const port = chrome.runtime.connectNative(NATIVE_HOST_NAME);
+          let settled = false;
+
+          const finish = (err, data) => {
+            if (settled) return;
+            settled = true;
+            try { port.disconnect(); } catch {}
+            if (err) reject(err);
+            else resolve(data);
+          };
+
+          const timeout = setTimeout(() => {
+            finish(new Error("Native download timeout"));
+          }, 1000 * 60 * 60);
+
+          port.onMessage.addListener(async (msg) => {
+            if (!msg || typeof msg !== "object") return;
+            if (msg.type === "progress") {
+              const pct = Number(msg.percent);
+              if (Number.isFinite(pct)) {
+                state.download.status = "downloading";
+                state.download.progressPct = Math.max(0, Math.min(100, Math.floor(pct)));
+                await persistState();
+                await broadcastState();
+              }
+              return;
+            }
+            if (msg.type === "result") {
+              clearTimeout(timeout);
+              finish(null, msg);
+            }
+          });
+
+          port.onDisconnect.addListener(() => {
+            const err = chrome.runtime.lastError;
+            if (err) {
+              clearTimeout(timeout);
+              finish(new Error(err.message || "Native host disconnected"));
+            }
+          });
+
+          try {
+            port.postMessage({ action: "download_with_curl_stream", payload });
+          } catch (e) {
+            clearTimeout(timeout);
+            finish(new Error(String(e?.message || e)));
+          }
+        });
+
+        if (nativeRes?.ok) {
+          state.download.status = "complete";
+          state.download.filename = nativeRes.output || payload.output;
+          state.download.openPath = nativeRes.absOutput || "";
+          state.download.progressPct = 100;
+          state.download.endedAt = now();
+          pushHistory({
+            kind: "download",
+            status: "complete",
+            url: state.selectedUrl,
+            file: state.download.openPath || state.download.filename,
+            filePath: state.download.openPath || ""
+          });
+          await persistState();
+          await broadcastState();
+          sendResponse({ ok: true, method: "native_host", output: state.download.filename });
+          return;
+        }
+        throw new Error(nativeRes?.error || "Native host failed");
+      } catch (nativeErr) {
+        const nativeErrMsg = String(nativeErr?.message || nativeErr || "");
+        console.log("[SMART_DOWNLOAD] Strategy 1 failed:", nativeErrMsg);
+
+        const missingNative =
+          nativeErrMsg.includes("Specified native messaging host not found") ||
+          nativeErrMsg.includes("Native host has exited") ||
+          nativeErrMsg.includes("Native host disconnected") ||
+          nativeErrMsg.includes("Could not establish connection");
+
+        if (missingNative) {
+          // Native host not installed → show setup instructions and fallback
+          state.download.status = "error";
+          state.download.error = "Native Host not installed. One-time setup required.";
+          state.download.endedAt = now();
+          await persistState();
+          await broadcastState();
+          sendResponse({
+            ok: false,
+            error: "Native Host not installed. One-time setup required (30 seconds).",
+            needsSetup: true
+          });
+          return;
+        }
+        // Other native error → cascade to fallback
+      }
+
+      // --- Strategy 2: Open URL in tab context (fallback) ---
+      console.log("[SMART_DOWNLOAD] Strategy 2: open in tab");
+      if (typeof state.selectedFromTab === "number") {
+        const opened = await openUrlFromTabContext(state.selectedFromTab, state.selectedUrl);
+        if (opened) {
+          state.download.status = "open_in_tab";
+          state.download.endedAt = now();
+          await persistState();
+          await broadcastState();
+          sendResponse({
+            ok: true,
+            method: "open_tab",
+            note: "Opened direct link in browser. File may be incomplete — install Native Host for reliable downloads."
+          });
+          return;
+        }
+      }
+
+      state.download.status = "error";
+      state.download.error = "Download failed. Please install Native Host for reliable downloads.";
+      state.download.endedAt = now();
+      await persistState();
+      await broadcastState();
+      sendResponse({ ok: false, error: state.download.error, needsSetup: true });
       return;
     }
 
