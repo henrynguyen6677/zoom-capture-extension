@@ -81,7 +81,7 @@ function statusText(download) {
   if (!download) return "Ready";
 
   if (download.status === "idle") return "Ready";
-  if (download.status === "starting") return "Initializing download...";
+  if (download.status === "starting") return "Preparing download...";
   if (download.status === "downloading") {
     if (typeof download.progressPct === "number" && download.progressPct > 0) {
       return `Downloading: ${Math.floor(download.progressPct)}%`;
@@ -95,7 +95,7 @@ function statusText(download) {
     return `Completed: ${download.filename || "(unknown file name)"}`;
   }
   if (download.status === "open_in_tab") {
-    return "Server blocked downloads API; opened the direct link in a new tab.";
+    return "Opened in browser because direct file saving is unavailable for this link.";
   }
   if (download.status === "error") {
     return `Error: ${download.error || "Unknown error"}`;
@@ -204,7 +204,7 @@ function applyNativeStatus(nativeStatus) {
     return;
   }
 
-  setupStatusPillEl.textContent = "Not installed";
+  setupStatusPillEl.textContent = "Not detected";
   setupStatusPillEl.className = "setup-pill missing";
 }
 
@@ -245,13 +245,11 @@ async function applyState(state) {
   latestState = state || null;
   const selected = state?.selectedUrl || "";
   const hasValidSelected = !!selected && /^https?:\/\//i.test(selected);
-  capturedLinkEl.textContent = selected ? shortenUrl(selected) : "No link captured";
+  capturedLinkEl.textContent = selected ? shortenUrl(selected) : "No link captured yet";
   capturedLinkEl.classList.toggle("empty-state", !selected);
   capturedLinkEl.title = selected || "";
   if (selected) {
-    const source = state?.selectedMeta?.source || "n/a";
-    const score = typeof state?.selectedMeta?.score === "number" ? state.selectedMeta.score : "-";
-    captureMetaEl.textContent = `source: ${source} | score: ${score}`;
+    captureMetaEl.textContent = "Link ready for download.";
     captureMetaEl.classList.remove("hidden");
   } else {
     captureMetaEl.textContent = "";
@@ -341,20 +339,20 @@ function getSetupInfo() {
     return {
       mode: "download",
       downloadUrl: `${RELEASE_BASE}/install.bat`,
-      buttonText: "⬇ Download Installer (.bat)",
-      instructions: "After download, double-click install.bat. Done!"
+      buttonText: "⬇ Download Windows installer",
+      instructions: "Download installer, open it, then return here to verify installation."
     };
   }
   return {
     mode: "command",
     command: `curl -fsSL ${INSTALL_SH_URL} | bash -s -- ${id}`,
-    instructions: "Open Terminal, paste this command, press Enter:"
+    instructions: "Manual install command for Terminal users:"
   };
 }
 
 function toFriendlyDownloadError(raw) {
   const msg = String(raw || "").toLowerCase();
-  if (!msg) return "Download failed. Please refresh and recapture the Zoom link, then try again.";
+  if (!msg) return "Download failed. Refresh recording page, capture link again, then retry.";
   if (
     msg.includes("curl") ||
     msg.includes("forbidden") ||
@@ -363,17 +361,16 @@ function toFriendlyDownloadError(raw) {
     msg.includes("403") ||
     msg.includes("timeout")
   ) {
-    return "Download failed. Please refresh and recapture the Zoom link, then try again.";
+    return "Download failed. Refresh recording page, capture link again, then retry.";
   }
-  return "Download failed. Please refresh and recapture the Zoom link, then try again.";
+  return "Download failed. Refresh recording page, capture link again, then retry.";
 }
 
 btnCapture.addEventListener("click", async () => {
   const res = await send("CAPTURE_FROM_ACTIVE_TAB");
   if (res.ok) {
     const src = res.pickedFrom || "network";
-    const score = typeof res.score === "number" ? res.score : "-";
-    showToast(`Link captured (${src}, score ${score}).`);
+    showToast(`Link captured from ${src}.`);
   } else {
     showToast(res.error || "Capture failed", true);
   }
@@ -401,13 +398,13 @@ async function doDownload() {
     }[method] || method;
 
     if (method === "open_tab") {
-      showToast(`${methodLabel} — file may be incomplete. Install Helper for reliable downloads.`, true);
+      showToast(`${methodLabel}. Install desktop helper for direct file saving.`, true);
     } else {
       showToast(`Download started (${methodLabel})`);
     }
   } else {
     if (res.needsSetup) {
-      showToast("Install Helper below ↓ then click ↻ to verify", true);
+      showToast("Install desktop helper, then click ↻ to verify.", true);
       blinkSetupCard();
     } else {
       showToast(toFriendlyDownloadError(res.error), true);
@@ -467,7 +464,7 @@ btnReset.addEventListener("click", async () => {
 });
 
 btnRefreshNative.addEventListener("click", async () => {
-  setupStatusPillEl.textContent = "Checking...";
+  setupStatusPillEl.textContent = "Checking status";
   setupStatusPillEl.className = "setup-pill checking";
   btnRefreshNative.disabled = true;
   btnRefreshNative.classList.add("spinning");
@@ -476,9 +473,9 @@ btnRefreshNative.addEventListener("click", async () => {
     if (resNative.ok) {
       applyNativeStatus(resNative);
       if (resNative.installed) {
-        showToast("Helper detected ✓");
+        showToast("Desktop helper detected ✓");
       } else {
-        showToast("Helper not found. Install below.", true);
+        showToast("Desktop helper not detected. Review setup below.", true);
       }
     } else {
       showToast(resNative.error || "Failed to check helper", true);
@@ -549,7 +546,7 @@ if (btnCopySetup) {
   btnCopySetup.addEventListener("click", async () => {
     const copied = await copyText(setupInfo.command || "");
     if (copied) {
-      showToast("Command copied ✓");
+      showToast("Install command copied ✓");
       flashIcon(btnCopySetup, true);
     } else {
       showToast("Failed to copy", true);
@@ -557,7 +554,7 @@ if (btnCopySetup) {
     }
   });
 }
-setupStatusPillEl.textContent = "Checking...";
+setupStatusPillEl.textContent = "Checking status";
 setupStatusPillEl.className = "setup-pill checking";
 refreshState();
 
