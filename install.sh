@@ -15,7 +15,7 @@ HOST_NAME="com.henry.zoomcurl"
 HOST_DIR="$HOME/.config/zoom-native-host"
 BINARY_NAME="zoom-native-host"
 REPO="henrynguyen6677/zoom-capture-extension"
-VERSION="v2.0.0"
+VERSION="v1.2.1"
 
 # Detect OS + Arch
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"

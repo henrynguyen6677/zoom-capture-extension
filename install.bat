@@ -7,7 +7,7 @@ setlocal enabledelayedexpansion
 set HOST_NAME=com.henry.zoomcurl
 set BINARY_NAME=zoom-native-host
 set REPO=henrynguyen6677/zoom-capture-extension
-set VERSION=v2.0.0
+set VERSION=v1.2.1
 set EXT_ID=mlhhonogkpdlokgahndkikdobjnpbgbb
 
 set HOST_DIR=%LOCALAPPDATA%\zoom-native-host

@@ -22,7 +22,7 @@ const btnRefreshNative = document.getElementById("btnRefreshNative");
 
 let latestState = null;
 let latestNativeInstalled = null;
-const RELEASE_BASE = "https://github.com/henrynguyen6677/zoom-capture-extension/releases/download/v2.0.0";
+const RELEASE_BASE = "https://github.com/henrynguyen6677/zoom-capture-extension/releases/download/v1.2.1";
 let historyCheckToken = 0;
 let historyRenderKey = "";
 
